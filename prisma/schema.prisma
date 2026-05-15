@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}
+
+model Setting {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
+}
+
+model Member {
+  id           Int             @id @default(autoincrement())
+  name         String
+  grade        Int
+  department   String
+  studentId    String          @unique
+  createdAt    DateTime        @default(now())
+  participations Participation[]
+}
+
+model Event {
+  id           Int             @id @default(autoincrement())
+  name         String
+  date         DateTime?
+  location     String?
+  feePerPerson Int             @default(0)
+  memo         String?
+  note         String?
+  status       String          @default("active") // "active" | "done"
+  carryOver    Int             @default(0)
+  createdAt    DateTime        @default(now())
+  participations Participation[]
+  accountItems   AccountItem[]
+}
+
+model Participation {
+  id       Int     @id @default(autoincrement())
+  eventId  Int
+  memberId Int
+  joined   Boolean @default(false)
+  paid     Boolean @default(false)
+
+  event    Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member   Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, memberId])
+}
+
+model AccountItem {
+  id      Int    @id @default(autoincrement())
+  eventId Int
+  type    String // "income" | "expense"
+  name    String
+  amount  Int    @default(0)
+
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}

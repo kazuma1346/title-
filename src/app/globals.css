@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { color-scheme: light; }
+  body {
+    @apply bg-gray-50 text-gray-900;
+    font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  input, textarea, select, button {
+    font-family: inherit;
+    color-scheme: light;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-2xl p-4 mb-3 shadow-sm border-0;
+  }
+  .section-title {
+    @apply text-sm font-semibold text-primary-900 tracking-wide mb-3;
+  }
+  .btn-primary {
+    @apply bg-primary-500 text-white font-semibold rounded-xl py-3.5 px-4 w-full text-sm active:opacity-80 transition-opacity;
+  }
+  .btn-secondary {
+    @apply bg-primary-100 text-primary-500 font-semibold rounded-xl py-3 px-4 text-sm;
+  }
+  .input-field {
+    @apply bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-primary-500 w-full;
+    color-scheme: light;
+  }
+}

@@ -20,15 +20,13 @@ export default function MembersPage() {
       fetch("/api/events").then(r => r.json()),
     ])
     setMembers(mems)
-
-    const doneEvents = evs.filter((e: { status: string; date: string | null; participations: { memberId: number; joined: boolean }[] }) => e.status === "done")
-      .sort((a: { date: string | null }, b: { date: string | null }) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime())
-
+    const doneEvents = evs.filter((e: any) => e.status === "done")
+      .sort((a: any, b: any) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime())
     const counts: Record<number, number> = {}
     mems.forEach((m: Member) => {
       let count = 0
       for (const ev of doneEvents) {
-        const p = ev.participations?.find((p: { memberId: number }) => p.memberId === m.id)
+        const p = ev.participations?.find((p: any) => p.memberId === m.id)
         if (!p || !p.joined) count++
         else break
       }
@@ -50,7 +48,7 @@ export default function MembersPage() {
     load()
   }
 
-  const grades = [...new Set(members.map(m => m.grade))].sort()
+  const grades = Array.from(new Set(members.map(m => m.grade))).sort()
 
   return (
     <AppLayout>
@@ -58,7 +56,6 @@ export default function MembersPage() {
         <p className="section-title mb-0">名簿</p>
         <button onClick={() => setShowForm(true)} className="text-xs bg-primary-100 text-primary-500 font-semibold px-3 py-1.5 rounded-full">＋ 追加</button>
       </div>
-
       {grades.map(grade => (
         <div key={grade} className="mb-2">
           <p className="text-xs font-bold text-gray-400 px-1 mb-2 tracking-widest">{grade}年生</p>
@@ -86,12 +83,9 @@ export default function MembersPage() {
           })}
         </div>
       ))}
-
       {members.length === 0 && (
         <div className="card text-center text-gray-400 text-sm py-10">メンバーがいません</div>
       )}
-
-      {/* メンバー追加モーダル */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-end z-50">
           <div className="bg-white rounded-t-3xl w-full p-6">

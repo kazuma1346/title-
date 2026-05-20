@@ -21,6 +21,7 @@ export default function PlanDetailPage() {
   const [allMembers, setAllMembers] = useState<Member[]>([])
   const [accTab, setAccTab] = useState<"income" | "expense">("income")
   const [showAddMember, setShowAddMember] = useState(false)
+  const [selectedMembers, setSelectedMembers] = useState<number[]>([])
   const [saving, setSaving] = useState(false)
   const [editingFee, setEditingFee] = useState(false)
   const [feeValue, setFeeValue] = useState("")
@@ -74,9 +75,40 @@ export default function PlanDetailPage() {
     load()
   }
 
-  const addMember = async (memberId: number) => {
-    await fetch("/api/participation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventId: id, memberId, joined: true, paid: false }) })
-    setShowAddMember(false); load()
+  const addSelectedMembers = async () => {
+    if (selectedMembers.length === 0) return
+    setSaving(true)
+    await Promise.all(
+      selectedMembers.map(memberId =>
+        fetch("/api/participation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ eventId: id, memberId, joined: true, paid: false })
+        })
+      )
+    )
+    setSaving(false)
+    setSelectedMembers([])
+    setShowAddMember(false)
+    load()
+  }
+
+  const removeMember = async (participationId: number) => {
+    if (!confirm("このメンバーを削除しますか？")) return
+    await fetch("/api/participation", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: participationId })
+    })
+    load()
+  }
+
+  const toggleMemberSelection = (memberId: number) => {
+    setSelectedMembers(prev =>
+      prev.includes(memberId)
+        ? prev.filter(id => id !== memberId)
+        : [...prev, memberId]
+    )
   }
 
   const addLocalItem = (type: string) => setLocalItems(prev => [...prev, { id: -(Date.now()), type, name: "", amount: 0 }])
@@ -153,6 +185,7 @@ export default function PlanDetailPage() {
             <span className="flex-1 text-sm font-medium text-gray-800">{p.member.name}</span>
             <button onClick={() => toggleJoined(p.memberId, p.joined)} className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${p.joined ? "bg-primary-500 text-white" : "bg-primary-100 text-primary-400"}`}>{p.joined ? "参加" : "不参加"}</button>
             <button onClick={() => togglePaid(p.memberId, p.paid)} className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${p.paid ? "bg-green-500 text-white" : "bg-gray-100 text-gray-400"}`}>{p.paid ? "集金済" : "未集金"}</button>
+            <button onClick={() => removeMember(p.id)} className="text-red-400 hover:text-red-600 text-sm font-bold px-2">✕</button>
           </div>
         ))}
       </div>
@@ -195,17 +228,44 @@ export default function PlanDetailPage() {
       )}
       {showAddMember && (
         <div className="fixed inset-0 bg-black/50 flex items-end z-50">
-          <div className="bg-white rounded-t-3xl w-full p-6 max-h-[60vh] overflow-y-auto">
+          <div className="bg-white rounded-t-3xl w-full p-6 max-h-[70vh] overflow-y-auto">
             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
-            <h3 className="text-base font-semibold text-gray-800 mb-3">メンバーを追加</h3>
+            <h3 className="text-base font-semibold text-gray-800 mb-3">メンバーを追加（複数選択可）</h3>
             {availableMembers.length === 0 ? <p className="text-gray-400 text-sm text-center py-6">追加できるメンバーがいません</p>
-              : availableMembers.map(m => (
-                <button key={m.id} onClick={() => addMember(m.id)} className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-800">{m.name}</span>
-                  <span className="text-xs text-gray-400">{m.grade}年</span>
-                </button>
-              ))}
-            <button onClick={() => setShowAddMember(false)} className="btn-primary mt-3">閉じる</button>
+              : availableMembers.map(m => {
+                const isSelected = selectedMembers.includes(m.id)
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => toggleMemberSelection(m.id)}
+                    className={`w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 mb-2 transition-colors ${
+                      isSelected ? "bg-primary-50 border-2 border-primary-500" : "bg-white border-2 border-gray-100 hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                      isSelected ? "bg-primary-500 border-primary-500" : "border-gray-300"
+                    }`}>
+                      {isSelected && (
+                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                    <span className="flex-1 text-sm font-medium text-gray-800">{m.name}</span>
+                    <span className="text-xs text-gray-400">{m.grade}年</span>
+                  </button>
+                )
+              })}
+            <div className="flex gap-2 mt-4">
+              <button onClick={() => { setShowAddMember(false); setSelectedMembers([]) }} className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-600 font-semibold">キャンセル</button>
+              <button
+                onClick={addSelectedMembers}
+                disabled={selectedMembers.length === 0 || saving}
+                className="flex-1 py-3 rounded-xl bg-primary-500 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? "追加中..." : `追加 (${selectedMembers.length})`}
+              </button>
+            </div>
           </div>
         </div>
       )}

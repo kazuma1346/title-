@@ -65,7 +65,6 @@ export default function PlanDetailPage() {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ eventId: id, memberId, paid: newPaid }),
     })
-    const existingItem = event.accountItems.find(
     const feeItem = event.accountItems.find(i => i.type === "income" && i.name === "参加費")
     const paidCount = event.participations.filter(p => p.paid).length
     const newPaidCount = newPaid ? paidCount + 1 : paidCount - 1

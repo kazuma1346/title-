@@ -27,7 +27,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-primary-900 flex flex-col items-center justify-center px-6">
       <div className="mb-8 text-center">
-        <div className="text-3xl font-bold text-white tracking-wide mb-1">Circle Admin</div>
+        <div className="text-3xl font-bold text-white tracking-wide mb-1">title</div>
         <div className="text-primary-100 text-sm opacity-75">サークル管理システム</div>
       </div>
 

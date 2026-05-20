@@ -15,7 +15,7 @@ const tabs = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const [title, setTitle] = useState("Circle Admin")
+  const [title, setTitle] = useState("title")
   const [userName, setUserName] = useState("")
 
   useEffect(() => {

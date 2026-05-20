@@ -66,18 +66,16 @@ export default function PlanDetailPage() {
       body: JSON.stringify({ eventId: id, memberId, paid: newPaid }),
     })
     const existingItem = event.accountItems.find(
-      i => i.type === "income" && i.name === `${memberName}（参加費）`
-    )
-    if (newPaid && !existingItem) {
-      await fetch("/api/account-items", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventId: id, type: "income", name: `${memberName}（参加費）`, amount: event.feePerPerson }),
-      })
-    } else if (!newPaid && existingItem) {
-      await fetch("/api/account-items", {
-        method: "DELETE", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: existingItem.id }),
-      })
+    const feeItem = event.accountItems.find(i => i.type === "income" && i.name === "参加費")
+    const paidCount = event.participations.filter(p => p.paid).length
+    const newPaidCount = newPaid ? paidCount + 1 : paidCount - 1
+    const newAmount = newPaidCount * event.feePerPerson
+    if (newAmount <= 0 && feeItem) {
+      await fetch("/api/account-items", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: feeItem.id }) })
+    } else if (feeItem) {
+      await fetch("/api/account-items", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: feeItem.id, name: "参加費", amount: newAmount }) })
+    } else if (newAmount > 0) {
+      await fetch("/api/account-items", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventId: id, type: "income", name: "参加費", amount: newAmount }) })
     }
     load()
   }

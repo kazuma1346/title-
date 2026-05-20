@@ -4,3 +4,5 @@ node_modules/
 .next/
 prisma/*.db
 prisma/*.db-journal
+.vercel
+.env*.local

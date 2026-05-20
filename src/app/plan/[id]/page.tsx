@@ -217,7 +217,7 @@ export default function PlanDetailPage() {
             <span className="flex-1 text-sm font-medium text-gray-800">{p.member.name}</span>
             <button onClick={() => toggleJoined(p.memberId, p.joined)} className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${p.joined ? "bg-primary-500 text-white" : "bg-primary-100 text-primary-400"}`}>{p.joined ? "参加" : "不参加"}</button>
             <button onClick={() => togglePaid(p.memberId, p.paid)} className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${p.paid ? "bg-green-500 text-white" : "bg-gray-100 text-gray-400"}`}>{p.paid ? "集金済" : "未集金"}</button>
-            <button onClick={() => removeMember(p.id)} className="text-red-400 hover:text-red-600 text-sm font-bold px-2">✕</button>
+            <button onClick={() => removeMember(p.id)} className="text-red-400 hover:text-red-600 text-sm font-bold px-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
           </div>
         ))}
       </div>
@@ -248,7 +248,7 @@ export default function PlanDetailPage() {
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">¥</span>
               <input className="input-field pl-6" type="number" value={item.amount || ""} placeholder="0" onChange={e => updateLocalBudgetItem(item.id, "amount", e.target.value)} />
             </div>
-            <button onClick={() => removeLocalBudgetItem(item.id)} className="bg-gray-100 text-gray-400 rounded-lg p-2 text-sm font-bold hover:bg-red-50 hover:text-red-400">✕</button>
+            <button onClick={() => removeLocalBudgetItem(item.id)} className="bg-gray-100 text-gray-400 rounded-lg p-2 text-sm font-bold hover:bg-red-50 hover:text-red-400"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
           </div>
         ))}
         <button onClick={() => addLocalBudgetItem(budgetTab)} className="w-full py-2.5 rounded-xl bg-primary-50 text-primary-500 text-sm font-semibold mt-1">＋ 科目を追加</button>
@@ -280,7 +280,7 @@ export default function PlanDetailPage() {
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">¥</span>
               <input className="input-field pl-6" type="number" value={item.amount || ""} placeholder="0" onChange={e => updateLocalItem(item.id, "amount", e.target.value)} />
             </div>
-            <button onClick={() => removeLocalItem(item.id)} className="bg-gray-100 text-gray-400 rounded-lg p-2 text-sm font-bold hover:bg-red-50 hover:text-red-400">✕</button>
+            <button onClick={() => removeLocalItem(item.id)} className="bg-gray-100 text-gray-400 rounded-lg p-2 text-sm font-bold hover:bg-red-50 hover:text-red-400"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
           </div>
         ))}
         <button onClick={() => addLocalItem(accTab)} className="w-full py-2.5 rounded-xl bg-primary-50 text-primary-500 text-sm font-semibold mt-1">＋ 科目を追加</button>

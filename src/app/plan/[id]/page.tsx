@@ -9,7 +9,7 @@ type Participation = { id: number; memberId: number; joined: boolean; paid: bool
 type AccountItem = { id: number; type: string; name: string; amount: number }
 type Event = {
   id: number; name: string; date: string | null; location: string | null
-  feePerPerson: number; memo: string | null; note: string | null; status: string; carryOver: number
+  feePerPerson: number; memo: string | null; note: string | null; status: string; carryOver: number; allocation: number
   participations: Participation[]; accountItems: AccountItem[]
 }
 
@@ -27,12 +27,15 @@ export default function PlanDetailPage() {
   const [localItems, setLocalItems] = useState<AccountItem[]>([])
   const [accSaving, setAccSaving] = useState(false)
   const [accSaved, setAccSaved] = useState(false)
+  const [allocation, setAllocation] = useState(0)
+  const [totalFunds, setTotalFunds] = useState(0)
 
   const load = useCallback(() => {
     fetch(`/api/events/${id}`).then(r => r.json()).then((ev: Event) => {
       setEvent(ev)
       setFeeValue(String(ev.feePerPerson))
       setLocalItems(ev.accountItems)
+      setAllocation(ev.allocation ?? 0)
     })
     fetch("/api/members").then(r => r.json()).then(setAllMembers)
   }, [id])

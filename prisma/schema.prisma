@@ -42,6 +42,7 @@ model Event {
   note         String?
   status       String          @default("active") // "active" | "done"
   carryOver    Int             @default(0)
+  allocation    Int             @default(0)
   createdAt    DateTime        @default(now())
   participations Participation[]
   accountItems   AccountItem[]

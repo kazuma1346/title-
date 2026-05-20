@@ -100,17 +100,16 @@ export default function MembersPage() {
   }
 
   const openEdit = (m: Member) => {
+    setEditTarget(m)
+    setForm({ name: m.name, grade: String(m.grade), department: m.department, studentId: m.studentId?.startsWith("tmp-") ? "" : m.studentId })
+    setShowEdit(true)
+  }
 
   const deleteMember = async (id: number) => {
     if (!confirm("このメンバーを削除しますか？")) return
     await fetch(`/api/members/${id}`, { method: "DELETE" })
     load()
   }
-    setEditTarget(m)
-    setForm({ name: m.name, grade: String(m.grade), department: m.department, studentId: m.studentId?.startsWith("tmp-") ? "" : m.studentId })
-    setShowEdit(true)
-  }
-
   const bulkImport = async () => {
     setLoading(true)
     for (const m of preview) {

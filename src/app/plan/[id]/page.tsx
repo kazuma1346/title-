@@ -36,6 +36,36 @@ export default function PlanDetailPage() {
   const [allocation, setAllocation] = useState(0)
   const [totalFunds, setTotalFunds] = useState(0)
 
+  
+
+  // 自動的に参加費を予算に計上
+  useEffect(() => {
+    if (!event) return
+    const participantCount = event.participations.length
+    const expectedFee = participantCount * event.feePerPerson
+    
+    // 既存の参加費項目を探す
+    const existingFeeItem = localBudgetItems.find(i => i.type === "income" && i.name === "参加費")
+    
+    if (expectedFee > 0) {
+      if (existingFeeItem) {
+        // 金額を更新
+        setLocalBudgetItems(prev => 
+          prev.map(i => i.id === existingFeeItem.id ? { ...i, amount: expectedFee } : i)
+        )
+      } else {
+        // 新規追加
+        setLocalBudgetItems(prev => [
+          { id: -(Date.now()), type: "income", name: "参加費", amount: expectedFee },
+          ...prev
+        ])
+      }
+    } else if (existingFeeItem) {
+      // 参加者がいない場合は削除
+      setLocalBudgetItems(prev => prev.filter(i => i.id !== existingFeeItem.id))
+    }
+  }, [event?.participations.length, event?.feePerPerson, event])
+
   const load = useCallback(() => {
     fetch(`/api/events/${id}`).then(r => r.json()).then((ev: Event) => {
       setEvent(ev)

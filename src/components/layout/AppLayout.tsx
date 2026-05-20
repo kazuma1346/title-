@@ -23,9 +23,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       if (!d.authenticated) { router.push("/login"); return }
       setUserName(d.userName ?? "")
     })
-    fetch("/api/settings").then(r => r.json()).then(d => {
-      if (d.circleName) setTitle(d.circleName)
-    })
   }, [router])
 
   const logout = async () => {

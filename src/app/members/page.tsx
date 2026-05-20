@@ -6,20 +6,29 @@ import Link from "next/link"
 type Member = { id: number; name: string; grade: number; department: string; studentId: string }
 type ParsedMember = { name: string; grade: number; department: string; studentId: string }
 
+const DEPT_MAP: Record<string, string> = { C: "商学科", M: "経営学科", E: "経済学科", J: "法学部", W: "法学部" }
+
+function inferFromStudentId(sid: string): { grade: number; department: string } | null {
+  const match = sid.match(/^(\d{2})([A-Za-z])/)
+  if (!match) return null
+  const grade = Math.min(Math.max(new Date().getFullYear() - (2000 + Number(match[1])) + 1, 1), 4)
+  return { grade, department: DEPT_MAP[match[2].toUpperCase()] ?? "" }
+}
+
 function parseMembersText(text: string): ParsedMember[] {
-  const lines = text.split(/\n/).map(l => l.trim()).filter(l => l.length > 0)
-  return lines.map(line => {
+  return text.split(/\n/).map(l => l.trim()).filter(l => l.length > 0).map(line => {
     let rest = line
-    const studentIdMatch = rest.match(/[A-Za-z]+\d+/)
-    const studentId = studentIdMatch ? studentIdMatch[0] : ""
+    const sidMatch = rest.match(/\d{2}[A-Za-z]\d+/) || rest.match(/[A-Za-z]\d+/)
+    const studentId = sidMatch ? sidMatch[0] : ""
     if (studentId) rest = rest.replace(studentId, "").trim()
+    const inferred = studentId ? inferFromStudentId(studentId) : null
     const gradeMatch = rest.match(/([1-4])\s*年[生]?/)
-    const grade = gradeMatch ? Number(gradeMatch[1]) : 1
+    let grade = gradeMatch ? Number(gradeMatch[1]) : (inferred?.grade ?? 1)
     if (gradeMatch) rest = rest.replace(gradeMatch[0], "").trim()
-    else { const numMatch = rest.match(/\b([1-4])\b/); if (numMatch) rest = rest.replace(numMatch[0], "").trim() }
+    else if (!inferred) { const n = rest.match(/\b([1-4])\b/); if (n) { grade = Number(n[1]); rest = rest.replace(n[0], "").trim() } }
     const deptMatch = rest.match(/[\u4e00-\u9fa5]+(?:学部|学科|学院|研究科|系|専攻)/)
-    const department = deptMatch ? deptMatch[0] : ""
-    if (department) rest = rest.replace(department, "").trim()
+    const department = deptMatch ? deptMatch[0] : (inferred?.department ?? "")
+    if (deptMatch) rest = rest.replace(deptMatch[0], "").trim()
     const name = rest.replace(/[\s\u3000・、。，,]+/g, " ").trim()
     return { name, grade, department, studentId }
   }).filter(m => m.name.length > 0)
@@ -60,16 +69,24 @@ export default function MembersPage() {
 
   useEffect(() => { load() }, [])
 
+  const onStudentIdChange = (val: string) => {
+    const inferred = inferFromStudentId(val)
+    if (inferred) {
+      setForm(f => ({ ...f, studentId: val, grade: String(inferred.grade), department: f.department || inferred.department }))
+    } else {
+      setForm(f => ({ ...f, studentId: val }))
+    }
+  }
+
   const create = async () => {
     if (!form.name.trim()) return
     setLoading(true)
     await fetch("/api/members", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, grade: Number(form.grade), studentId: form.studentId || `tmp-${Date.now()}` }),
+      body: JSON.stringify({ name: form.name, grade: Number(form.grade), department: form.department, studentId: form.studentId || `tmp-${Date.now()}` }),
     })
     setShowForm(false); setLoading(false)
-    setForm({ name: "", grade: "1", department: "", studentId: "" })
-    load()
+    setForm({ name: "", grade: "1", department: "", studentId: "" }); load()
   }
 
   const update = async () => {
@@ -77,18 +94,16 @@ export default function MembersPage() {
     setLoading(true)
     await fetch(`/api/members/${editTarget.id}`, {
       method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, grade: Number(form.grade) }),
+      body: JSON.stringify({ name: form.name, grade: Number(form.grade), department: form.department, studentId: form.studentId || editTarget.studentId }),
     })
     setShowEdit(false); setLoading(false); load()
   }
 
   const openEdit = (m: Member) => {
     setEditTarget(m)
-    setForm({ name: m.name, grade: String(m.grade), department: m.department, studentId: m.studentId })
+    setForm({ name: m.name, grade: String(m.grade), department: m.department, studentId: m.studentId?.startsWith("tmp-") ? "" : m.studentId })
     setShowEdit(true)
   }
-
-  const handleBulkParse = () => setPreview(parseMembersText(bulkText))
 
   const bulkImport = async () => {
     setLoading(true)
@@ -109,15 +124,24 @@ export default function MembersPage() {
         <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
         <h3 className="text-base font-semibold text-gray-800 mb-4">{title}</h3>
         <div className="space-y-3">
-          <div><label className="block text-xs text-gray-500 mb-1">名前 *</label>
-            <input className="input-field" placeholder="山田 太郎" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
-          <div><label className="block text-xs text-gray-500 mb-1">学年</label>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">学籍番号（入力で学年・学部を自動補完）</label>
+            <input className="input-field" placeholder="例：24E197" value={form.studentId} onChange={e => onStudentIdChange(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">名前 *</label>
+            <input className="input-field" placeholder="山田 太郎" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">学年</label>
             <select className="input-field" value={form.grade} onChange={e => setForm({ ...form, grade: e.target.value })}>
-              {[1,2,3,4].map(g => <option key={g} value={g}>{g}年</option>)}</select></div>
-          <div><label className="block text-xs text-gray-500 mb-1">学部</label>
-            <input className="input-field" placeholder="例：経済学部" value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} /></div>
-          <div><label className="block text-xs text-gray-500 mb-1">学籍番号</label>
-            <input className="input-field" placeholder="例：B2400123" value={form.studentId} onChange={e => setForm({ ...form, studentId: e.target.value })} /></div>
+              {[1,2,3,4].map(g => <option key={g} value={g}>{g}年</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">学部</label>
+            <input className="input-field" placeholder="例：経済学科" value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} />
+          </div>
         </div>
         <div className="flex gap-3 mt-5">
           <button onClick={onCancel} className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-600 text-sm font-medium">キャンセル</button>
@@ -169,17 +193,17 @@ export default function MembersPage() {
           <div className="bg-white rounded-t-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
             <h3 className="text-base font-semibold text-gray-800 mb-2">一括追加</h3>
-            <p className="text-xs text-gray-400 mb-3">1行1人で貼り付けてください。学年・学部・学籍番号は自動で判定します。</p>
+            <p className="text-xs text-gray-400 mb-3">1行1人。学籍番号から学年・学部を自動判定します。</p>
             <div className="bg-gray-50 rounded-xl p-3 mb-3 text-xs text-gray-500 space-y-0.5">
               <p className="font-medium mb-1">例：</p>
-              <p>山田 太郎 1年 経済学部 B2400123</p>
-              <p>佐藤花子　2年生　文学部</p>
-              <p>田中悠人 3 工学部</p>
+              <p>山田 太郎 24E197</p>
+              <p>佐藤花子 23M045</p>
+              <p>田中悠人 2年 経済学科</p>
             </div>
             <textarea className="input-field resize-none h-36 mb-3" placeholder="ここにテキストを貼り付け..."
               value={bulkText} onChange={e => { setBulkText(e.target.value); setPreview([]) }} />
             {preview.length === 0 ? (
-              <button onClick={handleBulkParse} disabled={!bulkText.trim()} className="btn-primary mb-3 disabled:opacity-50">内容を確認する</button>
+              <button onClick={() => setPreview(parseMembersText(bulkText))} disabled={!bulkText.trim()} className="btn-primary mb-3 disabled:opacity-50">内容を確認する</button>
             ) : (
               <>
                 <p className="text-xs font-semibold text-gray-600 mb-2">確認（{preview.length}名）</p>

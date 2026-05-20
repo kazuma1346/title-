@@ -7,10 +7,11 @@ import Link from "next/link"
 type Member = { id: number; name: string; grade: number }
 type Participation = { id: number; memberId: number; joined: boolean; paid: boolean; member: Member }
 type AccountItem = { id: number; type: string; name: string; amount: number }
+type BudgetItem = { id: number; type: string; name: string; amount: number }
 type Event = {
   id: number; name: string; date: string | null; location: string | null
   feePerPerson: number; memo: string | null; note: string | null; status: string; carryOver: number; allocation: number
-  participations: Participation[]; accountItems: AccountItem[]
+  participations: Participation[]; accountItems: AccountItem[]; budgetItems?: BudgetItem[]
 }
 
 export default function PlanDetailPage() {
@@ -19,13 +20,17 @@ export default function PlanDetailPage() {
   const id = Number(params.id)
   const [event, setEvent] = useState<Event | null>(null)
   const [allMembers, setAllMembers] = useState<Member[]>([])
+  const [budgetTab, setBudgetTab] = useState<"income" | "expense">("income")
   const [accTab, setAccTab] = useState<"income" | "expense">("income")
   const [showAddMember, setShowAddMember] = useState(false)
   const [selectedMembers, setSelectedMembers] = useState<number[]>([])
   const [saving, setSaving] = useState(false)
   const [editingFee, setEditingFee] = useState(false)
   const [feeValue, setFeeValue] = useState("")
+  const [localBudgetItems, setLocalBudgetItems] = useState<BudgetItem[]>([])
   const [localItems, setLocalItems] = useState<AccountItem[]>([])
+  const [budgetSaving, setBudgetSaving] = useState(false)
+  const [budgetSaved, setBudgetSaved] = useState(false)
   const [accSaving, setAccSaving] = useState(false)
   const [accSaved, setAccSaved] = useState(false)
   const [allocation, setAllocation] = useState(0)
@@ -36,6 +41,7 @@ export default function PlanDetailPage() {
       setEvent(ev)
       setFeeValue(String(ev.feePerPerson))
       setLocalItems(ev.accountItems)
+      setLocalBudgetItems(ev.budgetItems || [])
       setAllocation(ev.allocation ?? 0)
     })
     fetch("/api/members").then(r => r.json()).then(setAllMembers)
@@ -44,6 +50,10 @@ export default function PlanDetailPage() {
   useEffect(() => { load() }, [load])
 
   if (!event) return <AppLayout><div className="text-center text-gray-400 py-20">読み込み中...</div></AppLayout>
+
+  const localBudgetIncome = localBudgetItems.filter(i => i.type === "income").reduce((s, i) => s + (Number(i.amount) || 0), 0)
+  const localBudgetExpense = localBudgetItems.filter(i => i.type === "expense").reduce((s, i) => s + (Number(i.amount) || 0), 0)
+  const localBudgetBalance = localBudgetIncome - localBudgetExpense
 
   const localIncome = localItems.filter(i => i.type === "income").reduce((s, i) => s + (Number(i.amount) || 0), 0)
   const localExpense = localItems.filter(i => i.type === "expense").reduce((s, i) => s + (Number(i.amount) || 0), 0)
@@ -111,6 +121,27 @@ export default function PlanDetailPage() {
     )
   }
 
+  const addLocalBudgetItem = (type: string) => setLocalBudgetItems(prev => [...prev, { id: -(Date.now()), type, name: "", amount: 0 }])
+  const updateLocalBudgetItem = (itemId: number, field: "name" | "amount", value: string) =>
+    setLocalBudgetItems(prev => prev.map(i => i.id === itemId ? { ...i, [field]: field === "amount" ? Number(value) || 0 : value } : i))
+  const removeLocalBudgetItem = (itemId: number) => setLocalBudgetItems(prev => prev.filter(i => i.id !== itemId))
+
+  const saveBudgetItems = async () => {
+    setBudgetSaving(true)
+    const original = event.budgetItems || []
+    const deleted = original.filter(o => !localBudgetItems.find(l => l.id === o.id))
+    const added = localBudgetItems.filter(i => i.id < 0)
+    const updated = localBudgetItems.filter(i => i.id > 0)
+    await Promise.all([
+      ...deleted.map(d => fetch("/api/budget-items", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: d.id }) })),
+      ...added.map(a => fetch("/api/budget-items", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventId: id, type: a.type, name: a.name, amount: a.amount }) })),
+      ...updated.map(u => fetch("/api/budget-items", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: u.id, name: u.name, amount: u.amount }) })),
+    ])
+    setBudgetSaving(false); setBudgetSaved(true)
+    setTimeout(() => setBudgetSaved(false), 2000)
+    load()
+  }
+
   const addLocalItem = (type: string) => setLocalItems(prev => [...prev, { id: -(Date.now()), type, name: "", amount: 0 }])
   const updateLocalItem = (itemId: number, field: "name" | "amount", value: string) =>
     setLocalItems(prev => prev.map(i => i.id === itemId ? { ...i, [field]: field === "amount" ? Number(value) || 0 : value } : i))
@@ -145,6 +176,7 @@ export default function PlanDetailPage() {
 
   const existingMemberIds = event.participations.map(p => p.memberId)
   const availableMembers = allMembers.filter(m => !existingMemberIds.includes(m.id))
+  const budgetTabItems = localBudgetItems.filter(i => i.type === budgetTab)
   const tabItems = localItems.filter(i => i.type === accTab)
 
   return (
@@ -189,6 +221,40 @@ export default function PlanDetailPage() {
           </div>
         ))}
       </div>
+
+      {/* 予算セクション */}
+      <div className="card">
+        <div className="flex justify-between items-center mb-4">
+          <p className="section-title mb-0">予算</p>
+          <button onClick={saveBudgetItems} disabled={budgetSaving} className={`text-xs px-3 py-1.5 rounded-lg font-semibold ${budgetSaved ? "bg-green-100 text-green-600" : "bg-primary-500 text-white"} disabled:opacity-50`}>
+            {budgetSaving ? "保存中..." : budgetSaved ? "✓ 保存済" : "保存"}
+          </button>
+        </div>
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          {[{ label: "収入予算", value: `¥${localBudgetIncome.toLocaleString()}`, color: "text-green-600" }, { label: "支出予算", value: `¥${localBudgetExpense.toLocaleString()}`, color: "text-red-500" }, { label: "予算残高", value: `¥${localBudgetBalance.toLocaleString()}`, color: "text-primary-500" }].map(({ label, value, color }) => (
+            <div key={label} className="bg-gray-50 rounded-xl p-2.5 text-center"><p className="text-gray-400 text-[10px] mb-1">{label}</p><p className={`font-bold text-sm ${color}`}>{value}</p></div>
+          ))}
+        </div>
+        <div className="flex gap-2 mb-4 bg-gray-100 rounded-xl p-1">
+          {(["income", "expense"] as const).map(t => (
+            <button key={t} onClick={() => setBudgetTab(t)} className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${budgetTab === t ? "bg-white text-primary-500 shadow-sm" : "text-gray-400"}`}>{t === "income" ? "収入" : "支出"}</button>
+          ))}
+        </div>
+        {budgetTabItems.length === 0 && <p className="text-gray-300 text-xs text-center py-3">科目がありません</p>}
+        {budgetTabItems.map(item => (
+          <div key={item.id} className="flex gap-2 mb-2 items-center">
+            <input className="input-field flex-[2]" value={item.name} placeholder="科目名" onChange={e => updateLocalBudgetItem(item.id, "name", e.target.value)} />
+            <div className="relative flex-[1.3]">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">¥</span>
+              <input className="input-field pl-6" type="number" value={item.amount || ""} placeholder="0" onChange={e => updateLocalBudgetItem(item.id, "amount", e.target.value)} />
+            </div>
+            <button onClick={() => removeLocalBudgetItem(item.id)} className="bg-gray-100 text-gray-400 rounded-lg p-2 text-sm font-bold hover:bg-red-50 hover:text-red-400">✕</button>
+          </div>
+        ))}
+        <button onClick={() => addLocalBudgetItem(budgetTab)} className="w-full py-2.5 rounded-xl bg-primary-50 text-primary-500 text-sm font-semibold mt-1">＋ 科目を追加</button>
+      </div>
+
+      {/* 会計報告セクション */}
       <div className="card">
         <div className="flex justify-between items-center mb-4">
           <p className="section-title mb-0">会計報告</p>
@@ -219,6 +285,7 @@ export default function PlanDetailPage() {
         ))}
         <button onClick={() => addLocalItem(accTab)} className="w-full py-2.5 rounded-xl bg-primary-50 text-primary-500 text-sm font-semibold mt-1">＋ 科目を追加</button>
       </div>
+
       <div className="card">
         <p className="section-title">備考</p>
         <textarea className="input-field resize-none h-20" placeholder="メモを入力..." defaultValue={event.note ?? ""} onBlur={e => saveNote(e.target.value)} />

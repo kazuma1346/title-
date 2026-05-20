@@ -46,6 +46,7 @@ model Event {
   createdAt    DateTime        @default(now())
   participations Participation[]
   accountItems   AccountItem[]
+  budgetItems    BudgetItem[]
 }
 
 model Participation {
@@ -68,5 +69,14 @@ model AccountItem {
   name    String
   amount  Int    @default(0)
 
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model BudgetItem {
+  id      Int    @id @default(autoincrement())
+  eventId Int
+  type    String // "income" | "expense"
+  name    String
+  amount  Int    @default(0)
   event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }

@@ -2,22 +2,30 @@
 import { useEffect, useState } from "react"
 import AppLayout from "@/components/layout/AppLayout"
 import Link from "next/link"
-
 type Event = {
   id: number; name: string; date: string | null; location: string | null
   feePerPerson: number; status: string
   participations: { joined: boolean; memberId: number }[]
   accountItems: { type: string; amount: number }[]
 }
-
 export default function ActivityPage() {
   const [events, setEvents] = useState<Event[]>([])
-
-  useEffect(() => {
+  
+  const load = () => {
     fetch("/api/events").then(r => r.json()).then((evs: Event[]) =>
       setEvents(evs.filter(e => e.status === "done"))
     )
-  }, [])
+  }
+
+  useEffect(() => { load() }, [])
+
+  const deleteEvent = async (id: number, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!confirm("この活動を削除しますか？")) return
+    await fetch(`/api/events/${id}`, { method: "DELETE" })
+    load()
+  }
 
   return (
     <AppLayout>
@@ -45,6 +53,12 @@ export default function ActivityPage() {
                   <span className="text-primary-500 font-medium">繰越 ¥{(income - expense).toLocaleString()}</span>
                 </div>
               </div>
+              <button 
+                onClick={(e) => deleteEvent(ev.id, e)}
+                className="text-red-400 hover:text-red-600 text-sm font-bold px-2 mr-2"
+              >
+                ✕
+              </button>
               <svg className="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>

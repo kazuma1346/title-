@@ -215,7 +215,7 @@ export default function PlanDetailPage() {
       }
       return a.id - b.id
     })
-  }, [event?.participations])
+  }, [event?.participations.length, event?.participations.map(p => `${p.id}-${p.member.grade}`).join(',')])
 
   const existingMemberIds = event.participations.map(p => p.memberId)
   const availableMembers = allMembers.filter(m => !existingMemberIds.includes(m.id))

@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState, useCallback, useMemo } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
 import AppLayout from "@/components/layout/AppLayout"
 import Link from "next/link"
@@ -205,17 +205,6 @@ export default function PlanDetailPage() {
   }
 
   
-  // 学年順でソートした参加者リスト（順番を固定）
-  const sortedParticipations = useMemo(() => {
-    if (!event) return []
-    return [...event.participations].sort((a, b) => {
-      // 学年で降順ソート、同じ学年ならIDでソート
-      if (b.member.grade !== a.member.grade) {
-        return b.member.grade - a.member.grade
-      }
-      return a.id - b.id
-    })
-  }, [event?.participations.length, event?.participations.map(p => `${p.id}-${p.member.grade}`).join(',')])
 
   const existingMemberIds = event.participations.map(p => p.memberId)
   const availableMembers = allMembers.filter(m => !existingMemberIds.includes(m.id))
@@ -255,7 +244,7 @@ export default function PlanDetailPage() {
           <button onClick={() => setShowAddMember(true)} className="text-xs bg-primary-100 text-primary-500 font-semibold px-3 py-1.5 rounded-full">＋ 追加</button>
         </div>
         {event.participations.length === 0 && <p className="text-gray-400 text-sm text-center py-4">メンバーを追加してください</p>}
-        {sortedParticipations.map(p => (
+        {[...event.participations].sort((a, b) => b.member.grade - a.member.grade || a.id - b.id).map(p => (
           <div key={p.id} className="flex items-center gap-2 py-2.5 border-b border-gray-50 last:border-0">
             <span className="flex-1 text-sm font-medium text-gray-800">{p.member.name}</span>
             <button onClick={() => toggleJoined(p.memberId, p.joined)} className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${p.joined ? "bg-primary-500 text-white" : "bg-primary-100 text-primary-400"}`}>{p.joined ? "参加" : "不参加"}</button>

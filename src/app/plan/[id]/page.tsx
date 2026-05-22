@@ -101,10 +101,18 @@ export default function PlanDetailPage() {
 
   const togglePaid = async (memberId: number, current: boolean) => {
     const newPaid = !current
+    // 1. 支払い状態を更新
     await fetch("/api/participation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventId: id, memberId, paid: newPaid }) })
-    const feeItem = event.accountItems.find(i => i.type === "income" && i.name === "参加費")
-    const paidCount = event.participations.filter(p => p.paid).length
-    const newAmount = (newPaid ? paidCount + 1 : paidCount - 1) * event.feePerPerson
+    
+    // 2. データを再読み込み
+    const updatedEvent = await fetch(`/api/events/${id}`).then(r => r.json())
+    
+    // 3. 最新データで参加費を計算
+    const feeItem = updatedEvent.accountItems.find(i => i.type === "income" && i.name === "参加費")
+    const paidCount = updatedEvent.participations.filter(p => p.paid).length
+    const newAmount = paidCount * updatedEvent.feePerPerson
+    
+    // 4. 参加費を更新または作成
     if (newAmount <= 0 && feeItem) {
       await fetch("/api/account-items", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: feeItem.id }) })
     } else if (feeItem) {
@@ -112,6 +120,8 @@ export default function PlanDetailPage() {
     } else if (newAmount > 0) {
       await fetch("/api/account-items", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventId: id, type: "income", name: "参加費", amount: newAmount }) })
     }
+    
+    // 5. 最後に画面を更新
     load()
   }
 

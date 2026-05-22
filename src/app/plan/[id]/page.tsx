@@ -108,8 +108,8 @@ export default function PlanDetailPage() {
     const updatedEvent = await fetch(`/api/events/${id}`).then(r => r.json())
     
     // 3. 最新データで参加費を計算
-    const feeItem = updatedEvent.accountItems.find(i => i.type === "income" && i.name === "参加費")
-    const paidCount = updatedEvent.participations.filter(p => p.paid).length
+    const feeItem = updatedEvent.accountItems.find((i: AccountItem) => i.type === "income" && i.name === "参加費")
+    const paidCount = updatedEvent.participations.filter((p: Participation) => p.paid).length
     const newAmount = paidCount * updatedEvent.feePerPerson
     
     // 4. 参加費を更新または作成
